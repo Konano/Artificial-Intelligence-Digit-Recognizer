@@ -1,4 +1,4 @@
-NAME = "cnn-dropout-30"
+NAME = "cnn-small-3L-60"
 
 import csv
 from numpy import *
@@ -98,7 +98,7 @@ with tf.name_scope('inputs'):
 
 with tf.name_scope('convolutional_layer1'):
     with tf.name_scope('weights'):
-        W_conv1 = weight_variable([5,5,1,32])
+        W_conv1 = weight_variable([4,4,1,32])
     with tf.name_scope('biases'):
         b_conv1 = bias_variable([32])
     with tf.name_scope('conv'):
@@ -108,7 +108,7 @@ with tf.name_scope('convolutional_layer1'):
 
 with tf.name_scope('convolutional_layer2'):
     with tf.name_scope('weights'):
-        W_conv2 = weight_variable([5,5,32,64])
+        W_conv2 = weight_variable([4,4,32,64])
     with tf.name_scope('biases'):
         b_conv2 = bias_variable([64])
     with tf.name_scope('conv'):
@@ -116,17 +116,27 @@ with tf.name_scope('convolutional_layer2'):
     with tf.name_scope('max_pool'):
         h_pool2 = max_pool_2x2(h_conv2)
 
+with tf.name_scope('convolutional_layer3'):
+    with tf.name_scope('weights'):
+        W_conv3 = weight_variable([4,4,64,128])
+    with tf.name_scope('biases'):
+        b_conv3 = bias_variable([128])
+    with tf.name_scope('conv'):
+        h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
+    with tf.name_scope('max_pool'):
+        h_pool3 = max_pool_2x2(h_conv3)
+
 with tf.name_scope('fully_connected_layer1'):
     with tf.name_scope('flat'):
-        h_pool2_flat = tf.reshape(h_pool2,[-1, 7*7*64])
+        h_pool2_flat = tf.reshape(h_pool3,[-1, 4*4*128])
     with tf.name_scope('weights'):
-        W_fc1 = weight_variable([7*7*64, 1024])
+        W_fc1 = weight_variable([4*4*128, 1024])
     with tf.name_scope('biases'):
         b_fc1 = bias_variable([1024])
     with tf.name_scope('Wx_plus_b'):
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
-
-h_fc1_drop=tf.nn.dropout(h_fc1,keep_prob)
+    with tf.name_scope('dropout'):
+        h_fc1_drop=tf.nn.dropout(h_fc1,keep_prob)
 
 with tf.name_scope('fully_connected_layer2'):
     with tf.name_scope('weights'):
@@ -134,7 +144,6 @@ with tf.name_scope('fully_connected_layer2'):
     with tf.name_scope('biases'):
         b_fc2=bias_variable([10])
     with tf.name_scope('Wx_plus_b'):
-        # prediction=tf.nn.softmax(tf.matmul(h_fc1,W_fc2) + b_fc2)
         prediction=tf.nn.softmax(tf.matmul(h_fc1_drop,W_fc2) + b_fc2)
 
 with tf.name_scope('cross_entropy'):
@@ -155,7 +164,7 @@ times = 0
 rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1})
 writer.add_summary(rs, times)
 
-for o in range(30):
+for o in range(60):
     print(o)
     for i in range(410):
         batch_xs = train_xs[i*100 : (i+1)*100]

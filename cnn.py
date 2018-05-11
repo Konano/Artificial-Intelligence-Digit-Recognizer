@@ -1,5 +1,8 @@
+NAME = "cnn-30"
+
 import csv
 from numpy import *
+import tensorflow as tf
 
 def toInt(array):
     array = mat(array)
@@ -27,7 +30,7 @@ def dealLabel(label):
 
 def loadTrainData():
     TrainInput = []
-    with open('train.csv') as file:
+    with open('data/train.csv') as file:
         lines = csv.reader(file)
         for line in lines:
             TrainInput.append(line)
@@ -39,7 +42,7 @@ def loadTrainData():
 
 def loadTestData():
     TestInput = []
-    with open('test.csv') as file:
+    with open('data/test.csv') as file:
         lines = csv.reader(file)
         for line in lines:
             TestInput.append(line)
@@ -48,12 +51,10 @@ def loadTestData():
     data = toInt(TestInput)
     return dealData(data)
 
-import tensorflow as tf
-
 def output(v_xs):
-    global prediction
+    global prediction, NAME
     n,m = shape(v_xs)
-    with open('result-03.csv','w', newline='') as myFile:
+    with open("result/"+NAME+".csv",'w', newline='') as myFile:
         myWriter=csv.writer(myFile)
         myWriter.writerow(['ImageId', 'Label'])
         for i in range(280):
@@ -65,15 +66,15 @@ def output(v_xs):
             for j in range(100):
                 myWriter.writerow([i*100+j+1, result[j]])
 
-def compute_accuracy(v_xs, v_ys):
-    global prediction
-    # y_pre = sess.run(prediction, feed_dict={xs: v_xs, keep_prob: 1})
-    y_pre = sess.run(prediction, feed_dict={xs: v_xs})
-    correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(v_ys,1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    # result =  sess.run(accuracy, feed_dict={xs: v_xs, ys: v_ys, keep_prob: 1})
-    result = sess.run(accuracy, feed_dict={xs: v_xs, ys: v_ys})
-    return result
+# def compute_accuracy(v_xs, v_ys):
+#     global prediction
+#     # y_pre = sess.run(prediction, feed_dict={xs: v_xs, keep_prob: 1})
+#     y_pre = sess.run(prediction, feed_dict={xs: v_xs})
+#     correct_prediction = tf.equal(tf.argmax(y_pre,1), tf.argmax(v_ys,1))
+#     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+#     # result =  sess.run(accuracy, feed_dict={xs: v_xs, ys: v_ys, keep_prob: 1})
+#     result = sess.run(accuracy, feed_dict={xs: v_xs, ys: v_ys})
+#     return result
 
 def weight_variable(shape):
     initial = tf.truncated_normal(shape, stddev=0.1)
@@ -145,31 +146,27 @@ with tf.name_scope('train'):
 
 sess = tf.Session()
 merged = tf.summary.merge_all()
-writer = tf.summary.FileWriter("logs/", sess.graph)
+writer = tf.summary.FileWriter("logs/"+NAME+"/", sess.graph)
 init = tf.global_variables_initializer()
 sess.run(init)
 
 train_xs, train_ys = loadTrainData()
-# print(train_xs[0])
-# print(train_ys[0])
-# print(shape(train_xs))
-# print(shape(train_ys))
-# print(shape(train_xs[0]))
-# print(shape(train_ys[0]))
 
-for o in range(100):
-    for i in range(420):
+times = 0
+rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000]})
+writer.add_summary(rs, times)
+
+for o in range(30):
+    print(o)
+    for i in range(410):
         batch_xs = train_xs[i*100 : (i+1)*100]
         batch_ys = train_ys[i*100 : (i+1)*100]
         # sess.run(train_step, feed_dict={xs: batch_xs, ys: batch_ys, keep_prob: 0.5})
         sess.run(train_step, feed_dict={xs: batch_xs, ys: batch_ys})
 
-        rs = sess.run(merged,feed_dict={xs: batch_xs, ys: batch_ys})
-        writer.add_summary(rs, i)
-
-    # print(shape(batch_xs))
-    # print(shape(batch_ys))
-    # print(compute_accuracy(
-    #     train_xs[:1000], train_ys[:1000]))
+        if ((i+1) % 41 == 0):
+            times = times + 410
+            rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000]})
+            writer.add_summary(rs, times)
 
 output(loadTestData())

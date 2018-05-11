@@ -1,4 +1,4 @@
-NAME = "cnn-dropout-30"
+NAME = "cnn-bigger-30"
 
 import csv
 from numpy import *
@@ -98,9 +98,9 @@ with tf.name_scope('inputs'):
 
 with tf.name_scope('convolutional_layer1'):
     with tf.name_scope('weights'):
-        W_conv1 = weight_variable([5,5,1,32])
+        W_conv1 = weight_variable([5,5,1,64])
     with tf.name_scope('biases'):
-        b_conv1 = bias_variable([32])
+        b_conv1 = bias_variable([64])
     with tf.name_scope('conv'):
         h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
     with tf.name_scope('max_pool'):
@@ -108,9 +108,9 @@ with tf.name_scope('convolutional_layer1'):
 
 with tf.name_scope('convolutional_layer2'):
     with tf.name_scope('weights'):
-        W_conv2 = weight_variable([5,5,32,64])
+        W_conv2 = weight_variable([5,5,64,128])
     with tf.name_scope('biases'):
-        b_conv2 = bias_variable([64])
+        b_conv2 = bias_variable([128])
     with tf.name_scope('conv'):
         h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
     with tf.name_scope('max_pool'):
@@ -118,9 +118,9 @@ with tf.name_scope('convolutional_layer2'):
 
 with tf.name_scope('fully_connected_layer1'):
     with tf.name_scope('flat'):
-        h_pool2_flat = tf.reshape(h_pool2,[-1, 7*7*64])
+        h_pool2_flat = tf.reshape(h_pool2,[-1, 7*7*128])
     with tf.name_scope('weights'):
-        W_fc1 = weight_variable([7*7*64, 1024])
+        W_fc1 = weight_variable([7*7*128, 1024])
     with tf.name_scope('biases'):
         b_fc1 = bias_variable([1024])
     with tf.name_scope('Wx_plus_b'):

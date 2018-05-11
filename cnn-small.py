@@ -1,4 +1,4 @@
-NAME = "cnn-dropout-30"
+NAME = "cnn-small-30"
 
 import csv
 from numpy import *
@@ -98,7 +98,7 @@ with tf.name_scope('inputs'):
 
 with tf.name_scope('convolutional_layer1'):
     with tf.name_scope('weights'):
-        W_conv1 = weight_variable([5,5,1,32])
+        W_conv1 = weight_variable([4,4,1,32])
     with tf.name_scope('biases'):
         b_conv1 = bias_variable([32])
     with tf.name_scope('conv'):
@@ -108,7 +108,7 @@ with tf.name_scope('convolutional_layer1'):
 
 with tf.name_scope('convolutional_layer2'):
     with tf.name_scope('weights'):
-        W_conv2 = weight_variable([5,5,32,64])
+        W_conv2 = weight_variable([4,4,32,64])
     with tf.name_scope('biases'):
         b_conv2 = bias_variable([64])
     with tf.name_scope('conv'):
@@ -125,8 +125,8 @@ with tf.name_scope('fully_connected_layer1'):
         b_fc1 = bias_variable([1024])
     with tf.name_scope('Wx_plus_b'):
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
-
-h_fc1_drop=tf.nn.dropout(h_fc1,keep_prob)
+    with tf.name_scope('dropout'):
+        h_fc1_drop=tf.nn.dropout(h_fc1,keep_prob)
 
 with tf.name_scope('fully_connected_layer2'):
     with tf.name_scope('weights'):
@@ -134,7 +134,6 @@ with tf.name_scope('fully_connected_layer2'):
     with tf.name_scope('biases'):
         b_fc2=bias_variable([10])
     with tf.name_scope('Wx_plus_b'):
-        # prediction=tf.nn.softmax(tf.matmul(h_fc1,W_fc2) + b_fc2)
         prediction=tf.nn.softmax(tf.matmul(h_fc1_drop,W_fc2) + b_fc2)
 
 with tf.name_scope('cross_entropy'):

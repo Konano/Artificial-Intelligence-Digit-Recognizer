@@ -1,4 +1,4 @@
-NAME = "cnn-dropout-30"
+NAME = "cnn-bigger2-30"
 
 import csv
 from numpy import *
@@ -120,22 +120,31 @@ with tf.name_scope('fully_connected_layer1'):
     with tf.name_scope('flat'):
         h_pool2_flat = tf.reshape(h_pool2,[-1, 7*7*64])
     with tf.name_scope('weights'):
-        W_fc1 = weight_variable([7*7*64, 1024])
+        W_fc1 = weight_variable([7*7*64, 2048])
     with tf.name_scope('biases'):
-        b_fc1 = bias_variable([1024])
+        b_fc1 = bias_variable([2048])
     with tf.name_scope('Wx_plus_b'):
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
-
-h_fc1_drop=tf.nn.dropout(h_fc1,keep_prob)
+    with tf.name_scope('dropout'):
+        h_fc1_drop=tf.nn.dropout(h_fc1,keep_prob)
 
 with tf.name_scope('fully_connected_layer2'):
     with tf.name_scope('weights'):
-        W_fc2=weight_variable([1024, 10])
+        W_fc2=weight_variable([2048, 1024])
     with tf.name_scope('biases'):
-        b_fc2=bias_variable([10])
+        b_fc2=bias_variable([1024])
     with tf.name_scope('Wx_plus_b'):
-        # prediction=tf.nn.softmax(tf.matmul(h_fc1,W_fc2) + b_fc2)
-        prediction=tf.nn.softmax(tf.matmul(h_fc1_drop,W_fc2) + b_fc2)
+        h_fc2=tf.nn.softmax(tf.matmul(h_fc1_drop,W_fc2) + b_fc2)
+    with tf.name_scope('dropout'):
+        h_fc2_drop=tf.nn.dropout(h_fc2,keep_prob)
+
+with tf.name_scope('fully_connected_layer3'):
+    with tf.name_scope('weights'):
+        W_fc3=weight_variable([1024, 10])
+    with tf.name_scope('biases'):
+        b_fc3=bias_variable([10])
+    with tf.name_scope('Wx_plus_b'):
+        prediction=tf.nn.softmax(tf.matmul(h_fc2_drop,W_fc3) + b_fc3)
 
 with tf.name_scope('cross_entropy'):
     cross_entropy = tf.reduce_mean(-tf.reduce_sum(ys * tf.log(prediction), reduction_indices=[1]))
