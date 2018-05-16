@@ -1,4 +1,4 @@
-NAME = "cnn-2-small-inf"
+NAME = "cnn-2-small-test3"
 
 import csv
 from numpy import *
@@ -131,9 +131,9 @@ with tf.name_scope('fully_connected_layer1'):
         h_pool2_flat = tf.reshape(h_pool3_drop,[-1, 4*4*256])
         # h_pool2_flat = tf.reshape(h_pool3,[-1, 4*4*256])
     with tf.name_scope('weights'):
-        W_fc1 = weight_variable([4*4*256, 2048])
+        W_fc1 = weight_variable([4*4*256, 512])
     with tf.name_scope('biases'):
-        b_fc1 = bias_variable([2048])
+        b_fc1 = bias_variable([512])
     with tf.name_scope('Wx_plus_b'):
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
     with tf.name_scope('dropout'):
@@ -141,7 +141,7 @@ with tf.name_scope('fully_connected_layer1'):
 
 with tf.name_scope('fully_connected_layer2'):
     with tf.name_scope('weights'):
-        W_fc2 = weight_variable([2048, 10])
+        W_fc2 = weight_variable([512, 10])
     with tf.name_scope('biases'):
         b_fc2 = bias_variable([10])
     with tf.name_scope('Wx_plus_b'):
@@ -164,8 +164,8 @@ writer = tf.summary.FileWriter("logs/"+NAME+"/", sess.graph)
 init = tf.global_variables_initializer()
 sess.run(init)
 
-saver = tf.train.Saver(max_to_keep=5)
-min_cross = 1000000.0
+# saver = tf.train.Saver(max_to_keep=5)
+# min_cross = 1000000.0
 
 # saver = tf.train.Saver()
 # module_file = tf.train.latest_checkpoint("net/"+NAME+".ckpt")
@@ -177,7 +177,7 @@ times = 0
 rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
 writer.add_summary(rs, times)
 
-for o in range(100):
+for o in range(10):
     print(o)
     for i in range(410):
         batch_xs = train_xs[i*100 : (i+1)*100]
@@ -189,34 +189,13 @@ for o in range(100):
             rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
             writer.add_summary(rs, times)
 
-    val_cross = sess.run(cross_entropy, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
-    if val_cross < min_cross:
-        min_cross = val_cross
-        saver.save(sess, "net/"+NAME+".ckpt", global_step = o)
-        print('Save! ', min_cross)
+    # val_cross = sess.run(cross_entropy, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
+    # if val_cross < min_cross:
+    #     min_cross = val_cross
+    #     saver.save(sess, "net/"+NAME+".ckpt", global_step = o)
+    #     print('Save! ', min_cross)
 
-    if ((o+1) % 10 == 0):
-        time.sleep(300)
+    # if ((o+1) % 10 == 0):
+    #     time.sleep(300)
 
-# train_xs, train_ys = loadTrainData()
-
-# _h_fc2 = tf.constant([[1.0,2.0,3.0],[1.0,2.0,3.0],[1.0,2.0,3.0]])
-# _prediction = tf.nn.softmax(_h_fc2)
-# _ys = tf.constant([[0.0,0.0,1.0],[0.0,0.0,1.0],[0.0,0.0,1.0]])
-
-# print(sess.run(_cross_entropy))
-
-# # test1 = tf.log(prediction)
-# test2 = -tf.reduce_sum(_ys * tf.log(_prediction), reduction_indices=[1])
-# # test3 = tf.reduce_mean(-tf.reduce_sum(ys * tf.log(prediction), reduction_indices=[1]))
-# # print(sess.run(cross_entropy, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1}))
-# # print(sess.run(test1, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1}))
-# print(sess.run(test2))
-# # print(sess.run(test3, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1}))
-
-# rs = sess.run(merged, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1})
-# writer.add_summary(rs, 0)
-# rs = sess.run(merged, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1})
-# writer.add_summary(rs, 100)
-
-output(loadTestData())
+# output(loadTestData())

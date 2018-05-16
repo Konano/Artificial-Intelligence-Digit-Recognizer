@@ -1,4 +1,4 @@
-NAME = "cnn-2-small-inf"
+NAME = "cnn-3-"
 
 import csv
 from numpy import *
@@ -21,12 +21,14 @@ def dealData(data):
             data[i,j] = data[i,j] / 254
     return data
 
-def dealLabel(label):
+def dealLabel(label, NUMBER):
     n,m = shape(label)
-    newArray = zeros((m,10))
+    newArray = zeros((m))
     for i in range(m):
-        a = int(label[0,i])
-        newArray[i,a] = 1
+        if (label[0,i] == NUMBER):
+            newArray[i] = 1
+        else:
+            newArray[i] = 0
     return newArray
 
 def loadTrainData():
@@ -39,7 +41,7 @@ def loadTrainData():
     TrainInput = array(TrainInput)
     label = toInt(TrainInput[:,0])
     data = toInt(TrainInput[:,1:])
-    return dealData(data), dealLabel(label)
+    return dealData(data), label
 
 def loadTestData():
     TestInput = []
@@ -51,6 +53,29 @@ def loadTestData():
     TestInput = array(TestInput)
     data = toInt(TestInput)
     return dealData(data)
+
+right_label = -1
+wrong_label = -1
+
+def next_batch(num):
+    global train_xs, train_ys, right_label, wrong_label
+    n,m = shape(train_xs)
+    new_xs = zeros((num*2,m))
+    new_ys = zeros((num*2))
+    for i in range(num):
+        right_label += 1
+        while train_ys[right_label % n] != 1:
+            right_label += 1
+        right_label %= n
+        wrong_label += 1
+        while train_ys[wrong_label % n] != 0:
+            wrong_label += 1
+        wrong_label %= n
+        new_xs[i*2] = train_xs[right_label]
+        new_ys[i*2] = train_ys[right_label]
+        new_xs[i*2+1] = train_xs[wrong_label]
+        new_ys[i*2+1] = train_ys[wrong_label]
+    return new_xs, new_ys
 
 def output(v_xs):
     global prediction, NAME
@@ -83,16 +108,16 @@ def max_pool_2x2(x):
 
 with tf.name_scope('inputs'):
     xs = tf.placeholder(tf.float32, [None, 784], name='x_input')
-    ys = tf.placeholder(tf.float32, [None, 10], name='y_input')
+    ys = tf.placeholder(tf.float32, [None], name='y_input')
     x_image = tf.reshape(xs,[-1,28,28,1], name='image')
     keep_prob = tf.placeholder(tf.float32, name='dropout')
     keep_prob_conv = tf.placeholder(tf.float32, name='dropout_conv')
 
 with tf.name_scope('convolutional_layer1'):
     with tf.name_scope('weights'):
-        W_conv1 = weight_variable([4,4,1,64])
+        W_conv1 = weight_variable([4,4,1,32])
     with tf.name_scope('biases'):
-        b_conv1 = bias_variable([64])
+        b_conv1 = bias_variable([32])
     with tf.name_scope('conv'):
         h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
     with tf.name_scope('max_pool'):
@@ -102,38 +127,23 @@ with tf.name_scope('convolutional_layer1'):
 
 with tf.name_scope('convolutional_layer2'):
     with tf.name_scope('weights'):
-        W_conv2 = weight_variable([4,4,64,128])
+        W_conv2 = weight_variable([4,4,32,64])
     with tf.name_scope('biases'):
-        b_conv2 = bias_variable([128])
+        b_conv2 = bias_variable([64])
     with tf.name_scope('conv'):
         h_conv2 = tf.nn.relu(conv2d(h_pool1_drop, W_conv2) + b_conv2)
-        # h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
     with tf.name_scope('max_pool'):
         h_pool2 = max_pool_2x2(h_conv2)
     with tf.name_scope('dropout'):
         h_pool2_drop = tf.nn.dropout(h_pool2, keep_prob_conv)
 
-with tf.name_scope('convolutional_layer3'):
-    with tf.name_scope('weights'):
-        W_conv3 = weight_variable([4,4,128,256])
-    with tf.name_scope('biases'):
-        b_conv3 = bias_variable([256])
-    with tf.name_scope('conv'):
-        h_conv3 = tf.nn.relu(conv2d(h_pool2_drop, W_conv3) + b_conv3)
-        # h_conv3 = tf.nn.relu(conv2d(h_pool2, W_conv3) + b_conv3)
-    with tf.name_scope('max_pool'):
-        h_pool3 = max_pool_2x2(h_conv3)
-    with tf.name_scope('dropout'):
-        h_pool3_drop = tf.nn.dropout(h_pool3, keep_prob_conv)
-
 with tf.name_scope('fully_connected_layer1'):
     with tf.name_scope('flat'):
-        h_pool2_flat = tf.reshape(h_pool3_drop,[-1, 4*4*256])
-        # h_pool2_flat = tf.reshape(h_pool3,[-1, 4*4*256])
+        h_pool2_flat = tf.reshape(h_pool2_drop,[-1, 7*7*64])
     with tf.name_scope('weights'):
-        W_fc1 = weight_variable([4*4*256, 2048])
+        W_fc1 = weight_variable([7*7*64, 128])
     with tf.name_scope('biases'):
-        b_fc1 = bias_variable([2048])
+        b_fc1 = bias_variable([128])
     with tf.name_scope('Wx_plus_b'):
         h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
     with tf.name_scope('dropout'):
@@ -141,82 +151,51 @@ with tf.name_scope('fully_connected_layer1'):
 
 with tf.name_scope('fully_connected_layer2'):
     with tf.name_scope('weights'):
-        W_fc2 = weight_variable([2048, 10])
+        W_fc2 = weight_variable([128, 1])
     with tf.name_scope('biases'):
-        b_fc2 = bias_variable([10])
+        b_fc2 = bias_variable([1])
     with tf.name_scope('Wx_plus_b'):
         h_fc2 = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
 with tf.name_scope('prediction'):
-    prediction = tf.nn.softmax(h_fc2)
+    prediction = tf.sigmoid(h_fc2)
 with tf.name_scope('accuracy'):
-    accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.argmax(prediction,1), tf.argmax(ys,1)), tf.float32))
-    tf.summary.scalar('accuracy', accuracy)
-with tf.name_scope('cross_entropy'):
-    cross_entropy = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=h_fc2, labels=ys))
-    tf.summary.scalar('cross_entropy', cross_entropy)
+    accuracy = tf.reduce_mean(tf.abs(tf.reshape(prediction, [-1]) - ys))
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+    train_step = tf.train.AdamOptimizer(1e-4).minimize(accuracy)
 
 sess = tf.Session()
 merged = tf.summary.merge_all()
 writer = tf.summary.FileWriter("logs/"+NAME+"/", sess.graph)
 init = tf.global_variables_initializer()
-sess.run(init)
+saver = tf.train.Saver(max_to_keep=10)
 
-saver = tf.train.Saver(max_to_keep=5)
-min_cross = 1000000.0
-
-# saver = tf.train.Saver()
-# module_file = tf.train.latest_checkpoint("net/"+NAME+".ckpt")
+# module_file = tf.train.latest_checkpoint("net")
 # print(module_file)
 # saver.restore(sess, module_file)
 
-train_xs, train_ys = loadTrainData()
-times = 0
-rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
-writer.add_summary(rs, times)
+def Exam():
+    global train_xs, train_ys
+    rd = random.randint(0,41)
+    return sess.run(accuracy, feed_dict={xs: train_xs[rd*1000:(rd+1)*1000], ys: train_ys[rd*1000:(rd+1)*1000], keep_prob: 1, keep_prob_conv: 1})
 
-for o in range(100):
-    print(o)
-    for i in range(410):
-        batch_xs = train_xs[i*100 : (i+1)*100]
-        batch_ys = train_ys[i*100 : (i+1)*100]
-        sess.run(train_step, feed_dict={xs: batch_xs, ys: batch_ys, keep_prob: 0.5, keep_prob_conv: 0.75})
-        times = times + 1;
+print("START READ TRAINING DATA")
+train_xs, train_ys_all = loadTrainData()
+print("END")
 
-        if (times % 50 == 0):
-            rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
-            writer.add_summary(rs, times)
+for NUMBER in range(0, 10):
 
-    val_cross = sess.run(cross_entropy, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
-    if val_cross < min_cross:
-        min_cross = val_cross
-        saver.save(sess, "net/"+NAME+".ckpt", global_step = o)
-        print('Save! ', min_cross)
+    sess.run(init)
+    train_ys = dealLabel(train_ys_all, NUMBER)
+    print(Exam())
 
-    if ((o+1) % 10 == 0):
-        time.sleep(300)
+    for o in range(2000):
+        for i in range(20):
+            batch_xs, batch_ys = next_batch(100)
+            sess.run(train_step, feed_dict={xs: batch_xs, ys: batch_ys, keep_prob: 0.5, keep_prob_conv: 0.75})
+        print(Exam())
 
-# train_xs, train_ys = loadTrainData()
+    saver.save(sess, "net/"+NAME+str(NUMBER)+".ckpt")
+    time.sleep(300)
 
-# _h_fc2 = tf.constant([[1.0,2.0,3.0],[1.0,2.0,3.0],[1.0,2.0,3.0]])
-# _prediction = tf.nn.softmax(_h_fc2)
-# _ys = tf.constant([[0.0,0.0,1.0],[0.0,0.0,1.0],[0.0,0.0,1.0]])
-
-# print(sess.run(_cross_entropy))
-
-# # test1 = tf.log(prediction)
-# test2 = -tf.reduce_sum(_ys * tf.log(_prediction), reduction_indices=[1])
-# # test3 = tf.reduce_mean(-tf.reduce_sum(ys * tf.log(prediction), reduction_indices=[1]))
-# # print(sess.run(cross_entropy, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1}))
-# # print(sess.run(test1, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1}))
-# print(sess.run(test2))
-# # print(sess.run(test3, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1}))
-
-# rs = sess.run(merged, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1})
-# writer.add_summary(rs, 0)
-# rs = sess.run(merged, feed_dict={xs: train_xs, ys: train_ys, keep_prob: 1})
-# writer.add_summary(rs, 100)
-
-output(loadTestData())
+# output(loadTestData())

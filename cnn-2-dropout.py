@@ -163,8 +163,15 @@ writer = tf.summary.FileWriter("logs/"+NAME+"/", sess.graph)
 init = tf.global_variables_initializer()
 sess.run(init)
 
-train_xs, train_ys = loadTrainData()
+saver = tf.train.Saver(max_to_keep=5)
+min_cross = 1000000.0
 
+# saver = tf.train.Saver()
+# module_file = tf.train.latest_checkpoint("net/"+NAME+".ckpt")
+# print(module_file)
+# saver.restore(sess, module_file)
+
+train_xs, train_ys = loadTrainData()
 times = 0
 rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
 writer.add_summary(rs, times)
@@ -180,6 +187,12 @@ for o in range(100):
         if (times % 50 == 0):
             rs = sess.run(merged, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
             writer.add_summary(rs, times)
+
+    val_cross = sess.run(cross_entropy, feed_dict={xs: train_xs[41000:42000], ys: train_ys[41000:42000], keep_prob: 1, keep_prob_conv: 1})
+    if val_cross < min_cross:
+        min_cross = val_cross
+        saver.save(sess, "net/"+NAME+".ckpt", global_step = o)
+        print('Save! ', min_cross)
 
 # train_xs, train_ys = loadTrainData()
 
